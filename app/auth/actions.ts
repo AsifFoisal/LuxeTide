@@ -4,8 +4,9 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/src/lib/supabase/server';
 
-function getOrigin(): string {
-  return headers().get('origin') ?? '';
+async function getOrigin(): Promise<string> {
+  const headerStore = await headers();
+  return headerStore.get('origin') ?? '';
 }
 
 function redirectWithMessage(path: string, key: 'error' | 'message', value: string) {
@@ -40,11 +41,12 @@ export async function signup(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
+  const origin = await getOrigin();
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${getOrigin()}/auth/login?message=Email%20confirmed.%20Please%20sign%20in.`,
+      emailRedirectTo: `${origin}/auth/login?message=Email%20confirmed.%20Please%20sign%20in.`,
     },
   });
 
@@ -63,8 +65,9 @@ export async function requestPasswordReset(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
+  const origin = await getOrigin();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${getOrigin()}/auth/reset`,
+    redirectTo: `${origin}/auth/reset`,
   });
 
   if (error) {
