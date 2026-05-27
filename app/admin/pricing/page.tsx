@@ -1,167 +1,193 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { SHIPS } from '@/src/constants';
 import { PremiumButton, PremiumInput, PremiumSelect } from '@/src/components/PremiumUI';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
+import type { SuitePricing } from '@/src/types';
+import { getSuitesForShip } from '@/src/lib/suite-catalog';
+import {
+  createSuitePricing,
+  deleteSuitePricing,
+  getSuitePricing,
+  updateSuitePricing,
+} from '@/src/lib/suite-pricing';
 
-interface SuitePrice {
-  id: string;
-  shipName: string;
-  suiteName: string;
-  pricePerNight: number;
-  capacity: number;
-  description: string;
+function isDualPriceShip(shipId?: string) {
+  return shipId === 'the-wave' || shipId === 'the-river-cruise';
 }
 
-const WAVE_2_SUITES = [
-  'Infinity Royal Suite',
-  'Panorama Deluxe Suite',
-  'Panorama King Suite',
-  'Panorama Triple Suite',
-  'VIP Panorama Triple Suite',
-];
-
-const WAVE_SUITES = [
-  'Standard Cabin',
-  'Premium Cabin',
-  'Family Suite',
-  'Balcony Suite',
-];
-
-const RIVER_CRUISE_SUITES = [
-  'Comfort Cabin',
-  'Premium Cabin',
-  'Deluxe Suite',
-];
-
-function getSuitesForShip(shipName: string): string[] {
-  if (shipName === 'M.V. The Wave 2') return WAVE_2_SUITES;
-  if (shipName === 'M.V. The Wave') return WAVE_SUITES;
-  if (shipName === 'The River Cruise') return RIVER_CRUISE_SUITES;
-  return [];
+function formatPrice(value?: number) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? `৳${value.toLocaleString('en-IN')}`
+    : 'Not set';
 }
 
 export default function PricingAdminPage() {
   const [selectedShip, setSelectedShip] = useState(SHIPS[0].name);
-  const [suitePrices, setSuitePrices] = useState<SuitePrice[]>([
-    {
-      id: '1',
-      shipName: 'M.V. The Wave 2',
-      suiteName: 'Infinity Royal Suite',
-      pricePerNight: 25000,
-      capacity: 2,
-      description: 'Luxury suite with panoramic views',
-    },
-    {
-      id: '2',
-      shipName: 'M.V. The Wave 2',
-      suiteName: 'Panorama Deluxe Suite',
-      pricePerNight: 18000,
-      capacity: 2,
-      description: 'Deluxe suite with balcony',
-    },
-    {
-      id: '3',
-      shipName: 'M.V. The Wave 2',
-      suiteName: 'Panorama King Suite',
-      pricePerNight: 22000,
-      capacity: 2,
-      description: 'King suite with spacious interior',
-    },
-    {
-      id: '4',
-      shipName: 'M.V. The Wave 2',
-      suiteName: 'Panorama Triple Suite',
-      pricePerNight: 24000,
-      capacity: 3,
-      description: 'Triple suite for small groups',
-    },
-    {
-      id: '5',
-      shipName: 'M.V. The Wave 2',
-      suiteName: 'VIP Panorama Triple Suite',
-      pricePerNight: 30000,
-      capacity: 3,
-      description: 'VIP triple suite with premium amenities',
-    },
-    {
-      id: '6',
-      shipName: 'M.V. The Wave',
-      suiteName: 'Standard Cabin',
-      pricePerNight: 12000,
-      capacity: 2,
-      description: 'Standard comfortable cabin',
-    },
-    {
-      id: '7',
-      shipName: 'M.V. The Wave',
-      suiteName: 'Premium Cabin',
-      pricePerNight: 16000,
-      capacity: 2,
-      description: 'Premium cabin with enhanced amenities',
-    },
-    {
-      id: '8',
-      shipName: 'The River Cruise',
-      suiteName: 'Comfort Cabin',
-      pricePerNight: 8000,
-      capacity: 2,
-      description: 'Comfortable river cruise cabin',
-    },
-  ]);
+  const [suitePrices, setSuitePrices] = useState<SuitePricing[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Partial<SuitePrice>>({
+  const [formData, setFormData] = useState<Partial<SuitePricing>>({
     shipName: selectedShip,
     pricePerNight: 0,
     capacity: 1,
+    b2bPricePerNight: 0,
+    b2cPricePerNight: 0,
   });
 
-  const handleAddSuite = () => {
-    if (formData.suiteName && formData.pricePerNight) {
-      setSuitePrices([
-        ...suitePrices,
-        {
-          id: Date.now().toString(),
-          shipName: formData.shipName || selectedShip,
-          suiteName: formData.suiteName,
-          pricePerNight: formData.pricePerNight,
-          capacity: formData.capacity || 1,
-          description: formData.description || '',
-        },
-      ]);
-      setFormData({ shipName: selectedShip, pricePerNight: 0, capacity: 1, suiteName: '', description: '' });
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    setLoadError(null);
+
+    getSuitePricing()
+      .then((data) => {
+        if (isMounted) {
+          setSuitePrices(data);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load suite pricing:', error);
+        if (isMounted) {
+          setLoadError('Unable to load suite pricing. Please sign in and try again.');
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleAddSuite = async () => {
+    const shipMeta = SHIPS.find((ship) => ship.name === (formData.shipName || selectedShip));
+    if (!shipMeta) {
+      return;
+    }
+
+    const dualPriceShip = isDualPriceShip(shipMeta.id);
+    const canonicalPrice = dualPriceShip ? formData.b2bPricePerNight : formData.pricePerNight;
+
+    if (!formData.suiteName || !canonicalPrice) {
+      return;
+    }
+
+    if (dualPriceShip && (!formData.b2bPricePerNight || !formData.b2cPricePerNight)) {
+      return;
+    }
+
+    try {
+      const created = await createSuitePricing({
+        shipId: shipMeta.id,
+        shipName: shipMeta.name,
+        suiteName: formData.suiteName,
+        pricePerNight: canonicalPrice,
+        b2bPricePerNight: dualPriceShip ? formData.b2bPricePerNight : undefined,
+        b2cPricePerNight: dualPriceShip ? formData.b2cPricePerNight : undefined,
+        capacity: formData.capacity || 1,
+        description: formData.description || '',
+      });
+      setSuitePrices((current) => [...current, created]);
+      setFormData({
+        shipName: selectedShip,
+        pricePerNight: 0,
+        capacity: 1,
+        suiteName: '',
+        description: '',
+        b2bPricePerNight: 0,
+        b2cPricePerNight: 0,
+      });
+    } catch (error) {
+      console.error('Failed to create suite pricing:', error);
+      alert('Unable to save suite pricing. Please try again.');
     }
   };
 
-  const handleUpdateSuite = (id: string) => {
-    setSuitePrices(
-      suitePrices.map((suite) =>
-        suite.id === id ? { ...suite, ...formData } : suite
-      )
-    );
-    setEditingId(null);
-    setFormData({ shipName: selectedShip, pricePerNight: 0, capacity: 1, suiteName: '', description: '' });
+  const handleUpdateSuite = async (id: string) => {
+    const shipMeta = SHIPS.find((ship) => ship.name === (formData.shipName || selectedShip));
+    if (!shipMeta) {
+      return;
+    }
+
+    const dualPriceShip = isDualPriceShip(shipMeta.id);
+    const canonicalPrice = dualPriceShip ? formData.b2bPricePerNight : formData.pricePerNight;
+
+    if (!formData.suiteName || !canonicalPrice) {
+      return;
+    }
+
+    if (dualPriceShip && (!formData.b2bPricePerNight || !formData.b2cPricePerNight)) {
+      return;
+    }
+
+    try {
+      const updated = await updateSuitePricing(id, {
+        ...formData,
+        shipId: shipMeta.id,
+        shipName: shipMeta.name,
+        pricePerNight: canonicalPrice,
+        b2bPricePerNight: dualPriceShip ? formData.b2bPricePerNight : undefined,
+        b2cPricePerNight: dualPriceShip ? formData.b2cPricePerNight : undefined,
+      });
+      setSuitePrices((current) => current.map((suite) => (suite.id === id ? updated : suite)));
+      setEditingId(null);
+      setFormData({
+        shipName: selectedShip,
+        pricePerNight: 0,
+        capacity: 1,
+        suiteName: '',
+        description: '',
+        b2bPricePerNight: 0,
+        b2cPricePerNight: 0,
+      });
+    } catch (error) {
+      console.error('Failed to update suite pricing:', error);
+      alert('Unable to update suite pricing. Please try again.');
+    }
   };
 
-  const handleDeleteSuite = (id: string) => {
-    setSuitePrices(suitePrices.filter((suite) => suite.id !== id));
+  const handleDeleteSuite = async (id: string) => {
+    try {
+      await deleteSuitePricing(id);
+      setSuitePrices((current) => current.filter((suite) => suite.id !== id));
+    } catch (error) {
+      console.error('Failed to delete suite pricing:', error);
+      alert('Unable to delete suite pricing. Please try again.');
+    }
   };
 
-  const handleEditClick = (suite: SuitePrice) => {
+  const handleEditClick = (suite: SuitePricing) => {
     setEditingId(suite.id);
     setFormData(suite);
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setFormData({ shipName: selectedShip, pricePerNight: 0, capacity: 1, suiteName: '', description: '' });
+    setFormData({
+      shipName: selectedShip,
+      pricePerNight: 0,
+      capacity: 1,
+      suiteName: '',
+      description: '',
+      b2bPricePerNight: 0,
+      b2cPricePerNight: 0,
+    });
   };
 
   const filteredSuites = suitePrices.filter((suite) => suite.shipName === selectedShip);
-  const availableSuites = getSuitesForShip(selectedShip);
+  const selectedShipMeta = SHIPS.find((ship) => ship.name === selectedShip) ?? SHIPS[0];
+  const availableSuites = getSuitesForShip(selectedShipMeta.id);
+  const dualPriceShip = isDualPriceShip(selectedShipMeta.id);
+  const availableSuiteSet = new Set(availableSuites);
+  const visibleSuites = filteredSuites.filter((suite) => availableSuiteSet.has(suite.suiteName));
 
   return (
     <div className="space-y-8">
@@ -179,6 +205,18 @@ export default function PricingAdminPage() {
           Manage all suite prices, capacity, and details across all ships.
         </p>
       </motion.div>
+
+      {loadError && (
+        <div className="border border-rose-500/30 bg-rose-500/10 text-rose-200 px-4 py-3 text-sm">
+          {loadError}
+        </div>
+      )}
+
+      {isLoading && !loadError && (
+        <div className="border border-white/10 bg-slate-900/40 text-slate-300 px-4 py-3 text-sm">
+          Loading suite pricing...
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Add/Edit Suite Form */}
@@ -232,18 +270,47 @@ export default function PricingAdminPage() {
                 </PremiumSelect>
               </div>
 
-              <div>
-                <label className="block text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">
-                  Price Per Night (BDT)
-                </label>
-                <PremiumInput
-                  type="number"
-                  placeholder="Enter price"
-                  value={formData.pricePerNight || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, pricePerNight: parseInt(e.target.value) })}
-                  className="h-12"
-                />
-              </div>
+              {dualPriceShip ? (
+                <>
+                  <div>
+                    <label className="block text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">
+                      B2B Price (BDT / person)
+                    </label>
+                    <PremiumInput
+                      type="number"
+                      placeholder="Enter B2B price"
+                      value={formData.b2bPricePerNight || ''}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, b2bPricePerNight: parseInt(e.target.value) })}
+                      className="h-12"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">
+                      B2C Price (BDT / person)
+                    </label>
+                    <PremiumInput
+                      type="number"
+                      placeholder="Enter B2C price"
+                      value={formData.b2cPricePerNight || ''}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, b2cPricePerNight: parseInt(e.target.value) })}
+                      className="h-12"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="block text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">
+                    Price Per Night (BDT / person)
+                  </label>
+                  <PremiumInput
+                    type="number"
+                    placeholder="Enter price"
+                    value={formData.pricePerNight || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, pricePerNight: parseInt(e.target.value) })}
+                    className="h-12"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">
@@ -332,14 +399,14 @@ export default function PricingAdminPage() {
                 {selectedShip} Suites
               </h3>
               <p className="text-slate-400 text-sm">
-                {filteredSuites.length} suite{filteredSuites.length !== 1 ? 's' : ''} configured
+                {visibleSuites.length} suite{visibleSuites.length !== 1 ? 's' : ''} configured
               </p>
             </div>
 
             {/* Suites Table/Grid */}
             <div className="space-y-3">
-              {filteredSuites.length > 0 ? (
-                filteredSuites.map((suite) => (
+              {visibleSuites.length > 0 ? (
+                visibleSuites.map((suite) => (
                   <motion.div
                     key={suite.id}
                     initial={{ opacity: 0 }}
@@ -351,7 +418,7 @@ export default function PricingAdminPage() {
                         <h4 className="text-lg font-heading text-white">{suite.suiteName}</h4>
                         <p className="text-sm text-slate-400 mt-1">{suite.description}</p>
                       </div>
-                      <div className="flex gap-2 flex-shrink-0 ml-4">
+                      <div className="flex gap-2 shrink-0 ml-4">
                         <button
                           onClick={() => handleEditClick(suite)}
                           className="p-2 text-slate-400 hover:text-gold transition-colors"
@@ -372,7 +439,9 @@ export default function PricingAdminPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-slate-400">Price:</span>
                         <span className="text-gold font-heading">
-                          ৳{suite.pricePerNight.toLocaleString()} / night
+                          {suite.b2bPricePerNight && suite.b2cPricePerNight
+                            ? `B2B ${formatPrice(suite.b2bPricePerNight)} / Person · B2C ${formatPrice(suite.b2cPricePerNight)} / Person`
+                            : `৳${suite.pricePerNight.toLocaleString()} / Person`}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -386,7 +455,7 @@ export default function PricingAdminPage() {
                 ))
               ) : (
                 <div className="text-center py-8 border border-dashed border-white/10 rounded-lg">
-                  <p className="text-slate-400">No suites configured for {selectedShip}</p>
+                  <p className="text-slate-400">No catalog suites configured for {selectedShip}</p>
                 </div>
               )}
             </div>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ShipDetailsView from "@/src/components/ShipDetailsView";
 import { getShipDetails, getShipSlugs } from "@/src/ship-details";
+import { getPublicSuitePricing } from "@/src/lib/suite-pricing-server";
 
 export function generateStaticParams() {
   return getShipSlugs().map((id) => ({ id }));
@@ -22,7 +23,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function ShipDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const details = getShipDetails(id);
+  const suitePricing = await getPublicSuitePricing({ shipId: id });
+  const details = getShipDetails(id, suitePricing);
   if (!details) {
     notFound();
   }

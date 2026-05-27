@@ -2,7 +2,7 @@
 
 import NextImage from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { motion } from "motion/react";
 import ShipBookingDialog from "@/src/components/ShipBookingDialog";
 import ShipSuiteGrid from "@/src/components/ShipSuiteGrid";
@@ -34,18 +34,18 @@ export default function ShipDetailsView({ details }: ShipDetailsViewProps) {
     : videos;
   const [lightboxImage, setLightboxImage] = useState<LightboxImage | null>(null);
 
-  const openLightbox = (image: LightboxImage) => {
+  const openLightbox = useCallback((image: LightboxImage) => {
     setLightboxImage(image);
-  };
+  }, []);
 
-  const preloadImage = (src: string) => {
+  const preloadImage = useCallback((src: string) => {
     if (typeof window === "undefined") {
       return;
     }
 
     const image = new window.Image();
     image.src = src;
-  };
+  }, []);
 
   return (
     <div className="bg-slate-950 text-slate-200">
@@ -54,11 +54,11 @@ export default function ShipDetailsView({ details }: ShipDetailsViewProps) {
           <video
             src={heroVideoSrc}
             poster={heroPoster}
-            autoPlay
+            // avoid aggressive preloading of large hero videos to reduce initial load
             muted
             loop
             playsInline
-            preload="auto"
+            preload="metadata"
             className="absolute inset-0 w-full h-full object-cover"
           />
         ) : heroPoster ? (
@@ -67,8 +67,10 @@ export default function ShipDetailsView({ details }: ShipDetailsViewProps) {
             alt={meta.name}
             fill
             priority
+            loading="eager"
             sizes="100vw"
             className="absolute inset-0 object-cover"
+            unoptimized={typeof heroPoster === 'string' && heroPoster.startsWith('http')}
           />
         ) : (
           <div className="absolute inset-0 bg-linear-to-br from-slate-900 via-slate-950 to-black" />
@@ -160,6 +162,7 @@ export default function ShipDetailsView({ details }: ShipDetailsViewProps) {
                   fill
                   sizes="(min-width: 768px) 50vw, 100vw"
                   className="object-cover"
+                  unoptimized={typeof heroPoster === 'string' && heroPoster.startsWith('http')}
                 />
               </button>
             ) : (
@@ -315,6 +318,9 @@ function MediaSectionBlock({
   onImageClick: (image: LightboxImage) => void;
   onImagePrefetch: (src: string) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleCount = expanded ? section.items.length : 3;
+  const itemsToShow = section.items.slice(0, visibleCount);
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -324,37 +330,58 @@ function MediaSectionBlock({
         )}
       </div>
       {section.items.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {section.items.map((item, index) => (
-            <button
-              key={`${section.id}-${item.src}-${index}`}
-              type="button"
-              onMouseEnter={() => onImagePrefetch(item.src)}
-              onFocus={() => onImagePrefetch(item.src)}
-              onClick={() =>
-                onImageClick({
-                  src: item.src,
-                  alt: item.title,
-                  caption: item.caption ?? item.title
-                })
-              }
-              className="overflow-hidden text-left cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
-              aria-label={`Open ${item.title} image`}
-            >
-              <div className="relative h-64 w-full">
-                <NextImage
-                  src={item.src}
-                  alt={item.title}
-                  fill
-                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                  className="object-cover"
-                />
-              </div>
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {itemsToShow.map((item, index) => (
+              <motion.button
+                key={`${section.id}-${item.src}-${index}`}
+                type="button"
+                onMouseEnter={() => onImagePrefetch(item.src)}
+                onFocus={() => onImagePrefetch(item.src)}
+                onClick={() =>
+                  onImageClick({
+                    src: item.src,
+                    alt: item.title,
+                    caption: item.caption ?? item.title
+                  })
+                }
+                className="overflow-hidden text-left cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
+                aria-label={`Open ${item.title} image`}
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.18 }}
+                transition={{ duration: 0.45, delay: index * 0.03 }}
+              >
+                <div className="relative h-64 w-full">
+                  <NextImage
+                    src={item.src}
+                    alt={item.title}
+                    fill
+                    unoptimized={item.src.startsWith("http")}
+                    sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                </div>
+              </motion.button>
+            ))}
+          </div>
+
+          {section.items.length > visibleCount && (
+            <div className="pt-4">
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="outline-button"
+              >
+                {expanded ? 'View less' : 'View more'}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
+
+export const MemoizedMediaSectionBlock = memo(MediaSectionBlock);
 

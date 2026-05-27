@@ -3,26 +3,72 @@
 import { motion, useScroll, useTransform } from 'motion/react';
 import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { SHIPS, DESTINATIONS, PACKAGES } from '@/src/constants';
+import { SHIPS, DESTINATIONS } from '@/src/constants';
 import { Calendar, Users, MapPin, ArrowRight, Ship } from 'lucide-react';
 import { PremiumButton, PremiumInput, PremiumSelect } from '@/src/components/PremiumUI';
+import { SuiteAvailability } from '@/src/types';
+import { getActiveSuiteAvailabilities } from '@/src/lib/suite-availability';
+import { getShipDetails } from '@/src/ship-details';
+
+type HomeSuite = {
+  slug: string;
+  title: string;
+  priceLabel: string;
+  ship: string;
+  shipId: string;
+  image?: { src: string };
+};
+
+function formatDateRangeLabel(startDate: string, endDate: string): string {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  const startLabel = start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const endLabel = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+  return `${startLabel} - ${endLabel}`;
+}
 
 export default function Home() {
   const containerRef = useRef(null);
-  const [suites, setSuites] = useState<Array<{ slug: string; title: string; priceLabel: string; ship: string; shipId: string; image?: { src: string } }>>([]);
+  const [suites, setSuites] = useState<HomeSuite[]>([]);
+  const [suiteAvailabilities, setSuiteAvailabilities] = useState<SuiteAvailability[]>([]);
+  const [destinationId, setDestinationId] = useState('');
+  const [selectedSuiteKey, setSelectedSuiteKey] = useState('');
+  const [selectedDateRangeId, setSelectedDateRangeId] = useState('');
 
-  // Fetch suites on client side
   useEffect(() => {
-    const loadSuites = async () => {
-      try {
-        const response = await fetch('/api/suites');
-        const data = await response.json();
-        setSuites(data);
-      } catch (error) {
-        console.error('Failed to load suites:', error);
-      }
+    const homeSuites = SHIPS.flatMap((ship) => {
+      const details = getShipDetails(ship.id);
+      return details?.suites.map((suite) => ({
+        slug: suite.slug,
+        title: suite.title,
+        priceLabel: suite.priceLabel,
+        ship: ship.name,
+        shipId: ship.id,
+        image: suite.image?.type === 'image' ? { src: suite.image.src } : undefined,
+      })) ?? [];
+    });
+
+    setSuites(homeSuites);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getActiveSuiteAvailabilities()
+      .then((ranges) => {
+        if (isMounted) {
+          setSuiteAvailabilities(ranges);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load suite availability:', error);
+      });
+
+    return () => {
+      isMounted = false;
     };
-    loadSuites();
   }, []);
 
   const { scrollYProgress } = useScroll({
@@ -41,17 +87,47 @@ export default function Home() {
     { title: 'Global Explore', icon: Calendar, desc: 'Infinite horizons' }
   ];
 
+  const selectedSuite = suites.find((suite) => `${suite.shipId}::${suite.slug}` === selectedSuiteKey);
+
+  const dateRangeOptions = selectedSuite
+    ? suiteAvailabilities.filter((item) => item.shipId === selectedSuite.shipId)
+    : [];
+
+  const selectedDateRange = dateRangeOptions.find((item) => item.id === selectedDateRangeId);
+
+  const bookingHref = selectedSuite && selectedDateRange
+    ? `/booking?${new URLSearchParams({
+        destinationId,
+        destinationName: DESTINATIONS.find((destination) => destination.id === destinationId)?.name || '',
+        shipId: selectedSuite.shipId,
+        shipName: selectedSuite.ship,
+        suiteSlug: selectedSuite.slug,
+        suiteTitle: selectedSuite.title,
+        dateRangeId: selectedDateRange.id,
+      }).toString()}`
+    : '/booking';
+
+  const isBookNowDisabled = !selectedSuite || !selectedDateRange;
+
+  const handleSuiteChange = (suiteKey: string) => {
+    setSelectedSuiteKey(suiteKey);
+    setSelectedDateRangeId('');
+  };
+
   return (
-    <div className="space-y-0 text-slate-300 bg-slate-950 overflow-x-hidden" ref={containerRef}>
+    <div className="relative space-y-0 text-slate-300 bg-slate-950 overflow-x-hidden" ref={containerRef}>
       {/* Hero Section with Parallax */}
       <section className="relative h-[95vh] flex items-center overflow-hidden">
-        <motion.div className="absolute inset-0 z-0" style={{ y }}>
+          <motion.div className="absolute inset-0 z-0" style={{ y }}>
           <img 
-            src="https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1920" 
+            src="https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=60&w=1200" 
             alt="Luxury Cruise Hero" 
-            className="w-full h-full object-cover scale-110"
+            className="w-full h-full object-cover scale-110 will-change-transform"
+            decoding="async"
+            loading="eager"
+            style={{ transform: 'translateZ(0)' }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/40 to-transparent"></div>
+          <div className="absolute inset-0 bg-linear-to-r from-slate-950 via-slate-950/40 to-transparent"></div>
           <div className="absolute inset-0 bg-black/40"></div>
         </motion.div>
 
@@ -89,29 +165,67 @@ export default function Home() {
             >
               <div className="space-y-2">
                 <label className="text-[8px] sm:text-[10px] uppercase tracking-widest text-gold font-bold">Destination</label>
-                <PremiumSelect className="h-10 sm:h-12 bg-white/5 border-white/10 w-full text-white text-sm sm:text-base">
-                  <option className="bg-slate-900">Where to go?</option>
-                  <option className="bg-slate-900">Sundarbans</option>
-                  <option className="bg-slate-900">Saint Martin&apos;s</option>
-                  <option className="bg-slate-900">Cox&apos;s Bazar</option>
+                <PremiumSelect
+                  value={destinationId}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDestinationId(e.target.value)}
+                  className="h-10 sm:h-12 bg-white/5 border-white/10 w-full text-white text-sm sm:text-base"
+                >
+                  <option value="" className="bg-slate-900">Where to go?</option>
+                  {DESTINATIONS.map((destination) => (
+                    <option key={destination.id} value={destination.id} className="bg-slate-900">
+                      {destination.name}
+                    </option>
+                  ))}
                 </PremiumSelect>
               </div>
               <div className="space-y-2">
-                <label className="text-[8px] sm:text-[10px] uppercase tracking-widest text-gold font-bold">Package Type</label>
-                <PremiumSelect className="h-10 sm:h-12 bg-white/5 border-white/10 w-full text-white text-sm sm:text-base">
-                  <option className="bg-slate-900">Select Package</option>
-                  <option className="bg-slate-900">Luxury Curation</option>
-                  <option className="bg-slate-900">Adventure Exped</option>
-                  <option className="bg-slate-900">Family Cruise</option>
+                <label className="text-[8px] sm:text-[10px] uppercase tracking-widest text-gold font-bold">Suite</label>
+                <PremiumSelect
+                  value={selectedSuiteKey}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleSuiteChange(e.target.value)}
+                  className="h-10 sm:h-12 bg-white/5 border-white/10 w-full text-white text-sm sm:text-base"
+                >
+                  <option value="" className="bg-slate-900">Select Suite</option>
+                  {suites.map((suite) => (
+                    <option key={`${suite.shipId}-${suite.slug}`} value={`${suite.shipId}::${suite.slug}`} className="bg-slate-900">
+                      {suite.title} - {suite.ship}
+                    </option>
+                  ))}
                 </PremiumSelect>
               </div>
               <div className="space-y-2">
-                <label className="text-[8px] sm:text-[10px] uppercase tracking-widest text-gold font-bold">Date</label>
-                <PremiumInput type="date" className="h-10 sm:h-12 bg-white/5 border-white/10 w-full text-sm sm:text-base" />
+                <label className="text-[8px] sm:text-[10px] uppercase tracking-widest text-gold font-bold">Date Range</label>
+                <PremiumSelect
+                  value={selectedDateRangeId}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedDateRangeId(e.target.value)}
+                  disabled={!selectedSuite}
+                  className="h-10 sm:h-12 bg-white/5 border-white/10 w-full text-white text-sm sm:text-base disabled:opacity-60"
+                >
+                  <option value="" className="bg-slate-900">
+                    {selectedSuite ? 'Select date range' : 'Choose suite first'}
+                  </option>
+                  {dateRangeOptions.map((range) => (
+                    <option key={range.id} value={range.id} className="bg-slate-900">
+                      {formatDateRangeLabel(range.startDate, range.endDate)}
+                    </option>
+                  ))}
+                </PremiumSelect>
               </div>
-              <PremiumButton className="h-10 sm:h-12 w-full flex items-center justify-center gap-2 group text-xs sm:text-sm">
-                BOOK NOW <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </PremiumButton>
+              {isBookNowDisabled ? (
+                <PremiumButton
+                  disabled
+                  className="h-10 sm:h-12 w-full flex items-center justify-center gap-2 group text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  BOOK NOW <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </PremiumButton>
+              ) : (
+                <Link
+                  href={bookingHref}
+                  className="gold-button h-10 sm:h-12 w-full inline-flex items-center justify-center gap-2 group text-xs sm:text-sm"
+                >
+                  BOOK NOW <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
+              )}
             </motion.div>
           </div>
         </div>
@@ -152,16 +266,16 @@ export default function Home() {
           >
             <div className="p-4 border border-white/5 bg-white/5 backdrop-blur-3xl shadow-3xl">
               <img 
-                src="https://images.unsplash.com/photo-1540541338287-41700207dee6" 
+                    src="https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=70&w=1200" 
                 alt="About" 
                     loading="lazy"
                     decoding="async"
-                className="w-full h-48 sm:h-80 md:h-[600px] object-cover"
+                className="w-full h-48 sm:h-80 md:h-150 object-cover"
               />
             </div>
             <div className="absolute -bottom-6 -right-6 sm:-bottom-8 sm:-right-8 md:-bottom-10 md:-right-10 w-32 sm:w-40 md:w-48 h-32 sm:h-40 md:h-48 bg-gold flex flex-col items-center justify-center text-slate-950 p-4 sm:p-6 text-center rounded-sm shadow-3xl">
               <span className="text-2xl sm:text-3xl md:text-4xl font-heading font-bold italic">25+</span>
-              <span className="text-[8px] sm:text-[10px] uppercase font-bold tracking-widest mt-2 uppercase">Years of Experience</span>
+              <span className="text-[8px] sm:text-[10px] uppercase font-bold tracking-widest mt-2">Years of Experience</span>
             </div>
           </motion.div>
 
@@ -211,7 +325,7 @@ export default function Home() {
                 transition={{ delay: i * 0.12, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
                 className="luxury-card overflow-hidden group"
               >
-                <div className="h-56 md:h-72 lg:h-[360px] overflow-hidden relative">
+                <div className="h-56 md:h-72 lg:h-90 overflow-hidden relative">
                   <img
                     src={ship.image}
                     alt={ship.name}
@@ -219,7 +333,7 @@ export default function Home() {
                     decoding="async"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-t from-slate-950 via-slate-950/30 to-transparent" />
                   <div className="absolute top-5 left-5 bg-gold text-slate-950 px-3 py-1 font-bold text-[10px] rounded-sm uppercase tracking-widest">
                     {ship.capacity}
                   </div>
@@ -278,7 +392,7 @@ export default function Home() {
                   {suite.image?.src ? (
                     <img src={suite.image.src} alt={suite.title} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]" />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gold/20 to-slate-800 flex items-center justify-center">
+                    <div className="w-full h-full bg-linear-to-br from-gold/20 to-slate-800 flex items-center justify-center">
                       <span className="text-slate-400">Suite Image</span>
                     </div>
                   )}
@@ -333,8 +447,8 @@ export default function Home() {
             </div>
           </div>
           <div className="relative hidden md:block">
-            <img src="https://images.unsplash.com/photo-1544735716-392fe2489ffa" alt="Why Choose Us" className="w-full h-64 sm:h-96 md:h-[700px] object-cover grayscale opacity-60" />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
+            <img src="https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=70&w=1200" alt="Why Choose Us" className="w-full h-64 sm:h-96 md:h-175 object-cover grayscale opacity-60 will-change-transform" loading="lazy" decoding="async" style={{ transform: 'translateZ(0)' }} />
+            <div className="absolute inset-0 bg-linear-to-t from-slate-950 via-transparent to-transparent" />
           </div>
         </div>
       </section>
@@ -352,7 +466,7 @@ export default function Home() {
             <p className="text-[8px] sm:text-[10px] text-slate-500 uppercase tracking-[0.3em] font-bold mt-3">The Blue Lagoon • Coral Paradise</p>
           </motion.div>
           
-          <div className="flex-[2] grid grid-cols-1 md:grid-cols-3 gap-0 min-h-64 md:min-h-80">
+          <div className="flex-2 grid grid-cols-1 md:grid-cols-3 gap-0 min-h-64 md:min-h-80">
             {DESTINATIONS.slice(0, 3).map((item, i) => (
               <motion.div 
                 key={item.id}

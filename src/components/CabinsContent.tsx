@@ -154,7 +154,7 @@ export default function CabinsContent({ suites }: CabinsContentProps) {
 
       {/* CTA Section */}
       <section className="luxury-container py-16 md:py-24">
-        <motion.div
+          <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -167,9 +167,9 @@ export default function CabinsContent({ suites }: CabinsContentProps) {
           <p className="text-slate-300 max-w-xl mx-auto">
             Select your preferred cabin and ship, then proceed to our booking system to reserve your luxury voyage.
           </p>
-          <button className="concierge-button mt-6">
+          <Link href="/booking" className="concierge-button mt-6">
             Book Your Cabin Now
-          </button>
+          </Link>
         </motion.div>
       </section>
     </div>

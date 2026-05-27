@@ -21,86 +21,7 @@ import {
 } from 'lucide-react';
 import { PremiumButton, PremiumInput, PremiumSelect } from '@/src/components/PremiumUI';
 import { Booking, BookingStatus, PaymentStatus } from '@/src/types';
-
-// Initial bookings data
-const initialBookings: Booking[] = [
-  {
-    id: 'BK-2041',
-    customerName: 'Aisha Khan',
-    customerEmail: 'aisha.khan@luxetide.com',
-    customerPhone: '+8801712345678',
-    travelStart: '2026-06-12',
-    travelEnd: '2026-06-16',
-    passengers: 2,
-    shipId: 'the-wave',
-    packageId: 'emerald-expedition',
-    destinationId: 'sundarbans',
-    status: 'confirmed',
-    paymentStatus: 'paid',
-    paymentMethod: 'Credit Card',
-    totalAmount: 'BDT 170,000',
-    specialRequests: 'Vegetarian meal preference',
-    adminNotes: 'VIP customer, special attention required',
-    createdAt: '2026-05-10'
-  },
-  {
-    id: 'BK-2077',
-    customerName: 'Rafi Islam',
-    customerEmail: 'rafi.islam@luxetide.com',
-    customerPhone: '+8801812345678',
-    travelStart: '2026-07-02',
-    travelEnd: '2026-07-08',
-    passengers: 4,
-    shipId: 'the-wave-2',
-    packageId: 'coral-luxury',
-    destinationId: 'saint-martins',
-    status: 'pending',
-    paymentStatus: 'partial',
-    paymentMethod: 'Bank Transfer',
-    totalAmount: 'BDT 320,000',
-    specialRequests: 'Anniversary celebration, need cake',
-    adminNotes: 'Follow up on payment',
-    createdAt: '2026-05-08'
-  },
-  {
-    id: 'BK-2099',
-    customerName: 'Nusrat Farah',
-    customerEmail: 'nusrat.farah@luxetide.com',
-    customerPhone: '+8801912345678',
-    travelStart: '2026-08-18',
-    travelEnd: '2026-08-22',
-    passengers: 3,
-    shipId: 'the-river-cruise',
-    packageId: 'emerald-expedition',
-    destinationId: 'coxs-bazar',
-    status: 'completed',
-    paymentStatus: 'paid',
-    paymentMethod: 'Cash',
-    totalAmount: 'BDT 210,000',
-    specialRequests: 'Wheelchair accessibility required',
-    adminNotes: 'Satisfied customer, left positive review',
-    createdAt: '2026-04-15'
-  },
-  {
-    id: 'BK-2105',
-    customerName: 'Tanzim Ahmed',
-    customerEmail: 'tanzim.ahmed@luxetide.com',
-    customerPhone: '+8801512345678',
-    travelStart: '2026-09-05',
-    travelEnd: '2026-09-10',
-    passengers: 5,
-    shipId: 'the-wave-2',
-    packageId: 'coral-luxury',
-    destinationId: 'kuakata',
-    status: 'cancelled',
-    paymentStatus: 'refunded',
-    paymentMethod: 'Credit Card',
-    totalAmount: 'BDT 280,000',
-    specialRequests: 'Need early check-in',
-    adminNotes: 'Cancelled due to family emergency',
-    createdAt: '2026-04-22'
-  }
-];
+import { createBooking, deleteBooking, getBookings, updateBooking } from '@/src/lib/bookings';
 
 const statusStyles: Record<BookingStatus, string> = {
   pending: 'border-amber-400/40 text-amber-200 bg-amber-500/10',
@@ -131,8 +52,10 @@ const paymentOptions: { value: PaymentStatus; label: string }[] = [
 ];
 
 export default function BookingsAdminPage() {
-  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
-  const [filteredBookings, setFilteredBookings] = useState<Booking[]>(initialBookings);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingStatus | ''>('');
   const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | ''>('');
@@ -142,6 +65,25 @@ export default function BookingsAdminPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Booking>>({});
+
+  const loadBookings = async () => {
+    setIsLoading(true);
+    setLoadError(null);
+
+    try {
+      const data = await getBookings();
+      setBookings(data);
+    } catch (error) {
+      console.error('Failed to load bookings:', error);
+      setLoadError('Unable to load bookings. Please sign in and try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBookings();
+  }, []);
 
   // Filter and sort bookings
   useEffect(() => {
@@ -155,7 +97,10 @@ export default function BookingsAdminPage() {
         booking.customerName.toLowerCase().includes(term) ||
         booking.customerEmail.toLowerCase().includes(term) ||
         booking.packageId?.toLowerCase().includes(term) ||
-        booking.shipId?.toLowerCase().includes(term)
+        booking.packageLabel?.toLowerCase().includes(term) ||
+        booking.shipId?.toLowerCase().includes(term) ||
+        booking.shipName?.toLowerCase().includes(term) ||
+        booking.suiteTitle?.toLowerCase().includes(term)
       );
     }
     
@@ -197,9 +142,17 @@ export default function BookingsAdminPage() {
     setIsEditing(true);
   };
 
-  const handleDeleteBooking = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this booking?')) {
-      setBookings(bookings.filter(booking => booking.id !== id));
+  const handleDeleteBooking = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this booking?')) {
+      return;
+    }
+
+    try {
+      await deleteBooking(id);
+      setBookings((current) => current.filter((booking) => booking.id !== id));
+    } catch (error) {
+      console.error('Booking delete error:', error);
+      alert('Unable to delete booking. Please try again.');
     }
   };
 
@@ -217,9 +170,9 @@ export default function BookingsAdminPage() {
       errors.push('Customer name is required');
     }
     
-    if (!formData.customerEmail || formData.customerEmail.trim() === '') {
-      errors.push('Customer email is required');
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.customerEmail)) {
+    if (!formData.customerEmail && !formData.customerPhone) {
+      errors.push('Customer email or phone is required');
+    } else if (formData.customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.customerEmail)) {
       errors.push('Invalid email format');
     }
     
@@ -246,7 +199,7 @@ export default function BookingsAdminPage() {
     return errors;
   };
 
-  const handleSaveBooking = () => {
+  const handleSaveBooking = async () => {
     const errors = validateBooking();
     
     if (errors.length > 0) {
@@ -256,14 +209,12 @@ export default function BookingsAdminPage() {
     
     try {
       if (isEditing && selectedBooking) {
-        // Update existing booking
-        setBookings(bookings.map(booking =>
-          booking.id === selectedBooking.id ? { ...booking, ...formData } as Booking : booking
-        ));
+        const updated = await updateBooking(selectedBooking.id, formData);
+        setBookings((current) =>
+          current.map((booking) => (booking.id === selectedBooking.id ? updated : booking))
+        );
       } else {
-        // Create new booking
-        const newBooking: Booking = {
-          id: `BK-${Math.floor(1000 + Math.random() * 9000)}`,
+        const created = await createBooking({
           customerName: formData.customerName || '',
           customerEmail: formData.customerEmail || '',
           customerPhone: formData.customerPhone || '',
@@ -272,18 +223,17 @@ export default function BookingsAdminPage() {
           passengers: formData.passengers || 1,
           status: formData.status || 'pending',
           paymentStatus: formData.paymentStatus || 'unpaid',
-          createdAt: new Date().toISOString().split('T')[0],
-          ...(formData.shipId && { shipId: formData.shipId }),
-          ...(formData.packageId && { packageId: formData.packageId }),
-          ...(formData.destinationId && { destinationId: formData.destinationId }),
-          ...(formData.paymentMethod && { paymentMethod: formData.paymentMethod }),
-          ...(formData.totalAmount && { totalAmount: formData.totalAmount }),
-          ...(formData.specialRequests && { specialRequests: formData.specialRequests }),
-          ...(formData.adminNotes && { adminNotes: formData.adminNotes })
-        };
-        setBookings([...bookings, newBooking]);
+          shipId: formData.shipId,
+          packageId: formData.packageId,
+          destinationId: formData.destinationId,
+          paymentMethod: formData.paymentMethod,
+          totalAmount: formData.totalAmount,
+          specialRequests: formData.specialRequests,
+          adminNotes: formData.adminNotes,
+        });
+        setBookings((current) => [...current, created]);
       }
-      
+
       setIsModalOpen(false);
       setFormData({});
       alert(isEditing ? 'Booking updated successfully!' : 'Booking created successfully!');
@@ -343,6 +293,18 @@ export default function BookingsAdminPage() {
           View, create, edit, and manage all customer bookings.
         </p>
       </motion.div>
+
+      {loadError && (
+        <div className="border border-rose-500/30 bg-rose-500/10 text-rose-200 px-4 py-3 text-sm">
+          {loadError}
+        </div>
+      )}
+
+      {isLoading && !loadError && (
+        <div className="border border-white/10 bg-slate-900/40 text-slate-300 px-4 py-3 text-sm">
+          Loading bookings...
+        </div>
+      )}
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -731,6 +693,9 @@ export default function BookingsAdminPage() {
                       <p className="text-white">
                         {formatDate(selectedBooking.travelStart)} - {formatDate(selectedBooking.travelEnd)}
                       </p>
+                      {selectedBooking.selectedDateRangeLabel && (
+                        <p className="text-slate-400">{selectedBooking.selectedDateRangeLabel}</p>
+                      )}
                       <p className="text-slate-400">{selectedBooking.passengers} passengers</p>
                     </div>
                     <div>
@@ -746,13 +711,21 @@ export default function BookingsAdminPage() {
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-2">Journey</p>
                       <p className="text-white">
-                        {selectedBooking.packageId ? selectedBooking.packageId.replace(/-/g, ' ') : 'Custom Journey'}
+                        {selectedBooking.packageLabel || (selectedBooking.packageId ? selectedBooking.packageId.replace(/-/g, ' ') : 'Custom Journey')}
+                      </p>
+                      {selectedBooking.suiteTitle && (
+                        <p className="text-slate-400">Suite: {selectedBooking.suiteTitle}</p>
+                      )}
+                      {(selectedBooking.roomCount || selectedBooking.guestCount) && (
+                        <p className="text-slate-400">
+                          Rooms: {selectedBooking.roomCount || 'N/A'} | Guests: {selectedBooking.guestCount || 'N/A'}
+                        </p>
+                      )}
+                      <p className="text-slate-400">
+                        Ship: {selectedBooking.shipName || (selectedBooking.shipId ? selectedBooking.shipId.replace(/-/g, ' ') : 'N/A')}
                       </p>
                       <p className="text-slate-400">
-                        Ship: {selectedBooking.shipId ? selectedBooking.shipId.replace(/-/g, ' ') : 'N/A'}
-                      </p>
-                      <p className="text-slate-400">
-                        Destination: {selectedBooking.destinationId ? selectedBooking.destinationId.replace(/-/g, ' ') : 'N/A'}
+                        Destination: {selectedBooking.destinationName || (selectedBooking.destinationId ? selectedBooking.destinationId.replace(/-/g, ' ') : 'N/A')}
                       </p>
                     </div>
                     <div>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, memo } from "react";
+import { motion } from "motion/react";
 import NextImage from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { MediaItem } from "@/src/ship-types";
@@ -60,26 +61,36 @@ export default function ShipMediaCarousel({ items, title, description }: ShipMed
         className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((item) => (
-          <article
-            key={item.src}
-            className="min-w-[82%] sm:min-w-[58%] lg:min-w-[42%] snap-start overflow-hidden border border-white/10 bg-slate-950/60"
-          >
-            <div className="relative aspect-[16/10] w-full">
-              {item.type === "pdf" ? (
-                <iframe src={item.src} title={item.title} className="h-full w-full" />
-              ) : (
-                <NextImage
-                  src={item.src}
-                  alt={item.title}
-                  fill
-                  sizes="(min-width: 1024px) 42vw, (min-width: 640px) 58vw, 82vw"
-                  className="object-cover"
-                />
-              )}
-            </div>
-          </article>
+          <CarouselItem key={item.src} item={item} />
         ))}
       </div>
     </section>
   );
 }
+
+const CarouselItem = memo(function CarouselItem({ item, index }: { item: MediaItem; index?: number }) {
+  return (
+    <motion.article
+      className="min-w-[82%] sm:min-w-[58%] lg:min-w-[42%] snap-start overflow-hidden border border-white/10 bg-slate-950/60"
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.45, delay: (index ?? 0) * 0.04 }}
+    >
+      <div className="relative aspect-[16/10] w-full">
+        {item.type === "pdf" ? (
+          <iframe src={item.src} title={item.title} className="h-full w-full" />
+        ) : (
+          <NextImage
+            src={item.src}
+            alt={item.title}
+            fill
+            sizes="(min-width: 1024px) 42vw, (min-width: 640px) 58vw, 82vw"
+            unoptimized={typeof item.src === 'string' && item.src.startsWith('http')}
+            className="object-cover"
+          />
+        )}
+      </div>
+    </motion.article>
+  );
+});

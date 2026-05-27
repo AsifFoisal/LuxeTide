@@ -3,6 +3,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { motion } from "motion/react";
+import { memo, useCallback, useState } from "react";
 import ShipBookingDialog from "@/src/components/ShipBookingDialog";
 import ShipMediaCarousel from "@/src/components/ShipMediaCarousel";
 import type { MediaItem, MediaSection, ShipDetails } from "@/src/ship-types";
@@ -58,8 +59,10 @@ export default function ShipExperiencePage({
             alt={meta.name}
             fill
             priority
+            loading="eager"
             sizes="100vw"
             className="absolute inset-0 object-cover"
+            unoptimized={typeof heroPoster === 'string' && heroPoster.startsWith('http')}
           />
         ) : (
           <div className="absolute inset-0 bg-linear-to-br from-slate-900 via-slate-950 to-black" />
@@ -182,6 +185,10 @@ export default function ShipExperiencePage({
 }
 
 function MediaSectionBlock({ section, subtle = false }: { section: MediaSection; subtle?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleCount = expanded ? section.items.length : 3;
+  const itemsToShow = section.items.slice(0, visibleCount);
+
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -190,10 +197,14 @@ function MediaSectionBlock({ section, subtle = false }: { section: MediaSection;
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-        {section.items.map((item) => (
-          <article
+        {itemsToShow.map((item, index) => (
+          <motion.article
             key={item.src}
             className={subtle ? "overflow-hidden border border-white/5 bg-white/5" : "overflow-hidden border border-white/10 bg-white/5"}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.18 }}
+            transition={{ duration: 0.48, delay: index * 0.03 }}
           >
             <div className="relative h-64 w-full">
               {item.type === "pdf" ? (
@@ -204,6 +215,7 @@ function MediaSectionBlock({ section, subtle = false }: { section: MediaSection;
                   alt={item.title}
                   fill
                   sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  unoptimized={typeof item.src === 'string' && item.src.startsWith('http')}
                   className="object-cover"
                 />
               )}
@@ -213,9 +225,19 @@ function MediaSectionBlock({ section, subtle = false }: { section: MediaSection;
               <h4 className="text-lg font-heading text-white">{item.title}</h4>
               {item.caption && <p className="text-sm text-slate-400">{item.caption}</p>}
             </div>
-          </article>
+          </motion.article>
         ))}
       </div>
+
+      {section.items.length > visibleCount && (
+        <div className="pt-4">
+          <button type="button" onClick={() => setExpanded((v) => !v)} className="outline-button">
+            {expanded ? 'View less' : 'View more'}
+          </button>
+        </div>
+      )}
     </section>
   );
 }
+
+export const MemoizedExperienceMediaSection = memo(MediaSectionBlock);

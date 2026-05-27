@@ -40,6 +40,34 @@ export interface Schedule {
   updatedAt: string;
 }
 
+export type SuiteAvailabilityStatus = 'active' | 'inactive';
+
+export interface SuiteAvailability {
+  id: string;
+  shipId: string;
+  shipName: string;
+  startDate: string;
+  endDate: string;
+  status: SuiteAvailabilityStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SuitePricing {
+  id: string;
+  shipId: string;
+  shipName: string;
+  suiteName: string;
+  suiteSlug?: string;
+  pricePerNight: number;
+  b2bPricePerNight?: number;
+  b2cPricePerNight?: number;
+  capacity: number;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
 export type PaymentStatus = 'unpaid' | 'paid' | 'partial' | 'refunded';
 
@@ -52,8 +80,16 @@ export interface Booking {
   travelEnd: string;
   passengers: number;
   shipId?: string;
+  shipName?: string;
   packageId?: string;
+  packageLabel?: string;
   destinationId?: string;
+  destinationName?: string;
+  suiteSlug?: string;
+  suiteTitle?: string;
+  roomCount?: number;
+  guestCount?: number;
+  selectedDateRangeLabel?: string;
   status: BookingStatus;
   paymentStatus: PaymentStatus;
   paymentMethod?: string;

@@ -1,114 +1,64 @@
-import { Schedule } from '@/src/types';
+import type { Schedule } from '@/src/types';
+import { requestJson } from '@/src/lib/api-client';
 
-const STORAGE_KEY = 'luxetide_schedules';
+type ScheduleQuery = {
+  status?: Schedule['status'];
+  available?: boolean;
+};
 
-export const mockSchedules: Schedule[] = [
-  {
-    id: 'SCH-001',
-    shipId: 'mv-bay-crown',
-    shipName: 'M.V. Bay Crown',
-    departureDate: '2026-06-12',
-    returnDate: '2026-06-16',
-    destination: 'Saint Martin\'s Island',
-    pricePerPerson: 'BDT 85,000',
-    totalCapacity: 800,
-    bookedSeats: 650,
-    status: 'scheduled',
-    amenities: ['Emerald Dining', 'Infinity Deck', 'Spa'],
-    itinerary: ['Dhaka Port', 'Saint Martin\'s', 'Coral Island', 'Return'],
-    createdAt: '2026-05-01',
-    updatedAt: '2026-05-15',
-  },
-  {
-    id: 'SCH-002',
-    shipId: 'sundarban-majestic',
-    shipName: 'Sundarban Majestic',
-    departureDate: '2026-07-01',
-    returnDate: '2026-07-05',
-    destination: 'Sundarban Mangrove Forest',
-    pricePerPerson: 'BDT 65,000',
-    totalCapacity: 150,
-    bookedSeats: 120,
-    status: 'scheduled',
-    amenities: ['Wildlife Tours', 'Local Cuisine', 'Safari Tenders'],
-    itinerary: ['Khulna Port', 'Mangrove Forest', 'Tiger Zone', 'Return'],
-    createdAt: '2026-04-15',
-    updatedAt: '2026-05-10',
-  },
-];
-
-// Get all schedules from localStorage or return mock data
-export function getSchedules(): Schedule[] {
-  if (typeof window === 'undefined') {
-    return mockSchedules;
+function buildQueryString(options?: ScheduleQuery): string {
+  if (!options) {
+    return '';
   }
-  
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored ? JSON.parse(stored) : mockSchedules;
-}
 
-// Save schedules to localStorage
-export function saveSchedules(schedules: Schedule[]): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules));
+  const params = new URLSearchParams();
+
+  if (options.status) {
+    params.set('status', options.status);
   }
+
+  if (options.available) {
+    params.set('available', 'true');
+  }
+
+  const query = params.toString();
+  return query ? `?${query}` : '';
 }
 
-// Get a single schedule by ID
-export function getScheduleById(id: string): Schedule | undefined {
-  return getSchedules().find(s => s.id === id);
+export async function getSchedules(options?: ScheduleQuery): Promise<Schedule[]> {
+  const query = buildQueryString(options);
+  return requestJson<Schedule[]>(`/api/schedules${query}`);
 }
 
-// Create a new schedule
-export function createSchedule(schedule: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>): Schedule {
-  const schedules = getSchedules();
-  const newSchedule: Schedule = {
-    ...schedule,
-    id: `SCH-${String(schedules.length + 1).padStart(3, '0')}`,
-    createdAt: new Date().toISOString().split('T')[0],
-    updatedAt: new Date().toISOString().split('T')[0],
-  };
-  saveSchedules([...schedules, newSchedule]);
-  return newSchedule;
+export async function getScheduleById(id: string): Promise<Schedule> {
+  return requestJson<Schedule>(`/api/schedules/${id}`);
 }
 
-// Update a schedule
-export function updateSchedule(id: string, updates: Partial<Schedule>): Schedule | null {
-  const schedules = getSchedules();
-  const index = schedules.findIndex(s => s.id === id);
-  
-  if (index === -1) return null;
-  
-  const updated: Schedule = {
-    ...schedules[index],
-    ...updates,
-    updatedAt: new Date().toISOString().split('T')[0],
-  };
-  
-  schedules[index] = updated;
-  saveSchedules(schedules);
-  return updated;
+export async function createSchedule(input: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>): Promise<Schedule> {
+  return requestJson<Schedule>('/api/schedules', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
-// Delete a schedule
-export function deleteSchedule(id: string): boolean {
-  const schedules = getSchedules();
-  const filtered = schedules.filter(s => s.id !== id);
-  
-  if (filtered.length === schedules.length) return false;
-  
-  saveSchedules(filtered);
-  return true;
+export async function updateSchedule(id: string, updates: Partial<Schedule>): Promise<Schedule> {
+  return requestJson<Schedule>(`/api/schedules/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
 }
 
-// Get schedules by ship ID
-export function getSchedulesByShipId(shipId: string): Schedule[] {
-  return getSchedules().filter(s => s.shipId === shipId);
+export async function deleteSchedule(id: string): Promise<void> {
+  await requestJson<{ ok: true }>(`/api/schedules/${id}`, {
+    method: 'DELETE',
+  });
 }
 
-// Get available schedules (with available seats)
-export function getAvailableSchedules(): Schedule[] {
-  return getSchedules().filter(
-    s => s.status === 'scheduled' && s.bookedSeats < s.totalCapacity
-  );
+export async function getSchedulesByShipId(shipId: string): Promise<Schedule[]> {
+  const schedules = await getSchedules();
+  return schedules.filter((schedule) => schedule.shipId === shipId);
+}
+
+export async function getAvailableSchedules(): Promise<Schedule[]> {
+  return getSchedules({ available: true });
 }

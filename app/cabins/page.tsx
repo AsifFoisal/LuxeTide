@@ -1,6 +1,7 @@
 import { SHIPS } from '@/src/constants';
 import { getShipDetails } from '@/src/ship-details';
 import CabinsContent from '@/src/components/CabinsContent';
+import { getPublicSuitePricing } from '@/src/lib/suite-pricing-server';
 
 interface SuiteData {
   shipId: string;
@@ -22,9 +23,10 @@ interface SuiteData {
   }>;
 }
 
-export default function CabinsPage() {
+export default async function CabinsPage() {
+  const suitePricing = await getPublicSuitePricing();
   const allSuites: SuiteData[] = SHIPS.map((ship) => {
-    const details = getShipDetails(ship.id);
+    const details = getShipDetails(ship.id, suitePricing);
     return {
       shipId: ship.id,
       shipName: ship.name,

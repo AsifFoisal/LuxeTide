@@ -1,6 +1,6 @@
 'use client';
 
-import { Ship, Menu, X, Phone, Mail } from 'lucide-react';
+import { Menu, X, Phone, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
@@ -11,6 +11,7 @@ export default function Navbar() {
   const navLinks = [
     { name: 'Home', path: '/', id: 'nav-home-link' },
     { name: 'Ships', path: '/ships', id: 'nav-ships-link' },
+    { name: 'Destinations', path: '/destinations', id: 'nav-destinations-link' },
     { name: 'Cabins', path: '/cabins', id: 'nav-cabins-link' },
     { name: 'Dining', path: '/dining', id: 'nav-dining-link' },
     { name: 'Services', path: '/services', id: 'nav-services-link' },
@@ -30,8 +31,7 @@ export default function Navbar() {
             <span className="flex items-center gap-2"><Mail size={12} className="text-gold" /> info@luxetide.com</span>
           </div>
           <div className="flex gap-6 uppercase">
-            <Link href="/auth/login" className="hover:text-gold transition-all">Login</Link>
-            <Link href="/auth/signup" className="hover:text-gold transition-all">Register</Link>
+            {/* removed login/register links as requested */}
           </div>
         </div>
       </div>
@@ -57,9 +57,9 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="h-4 w-px bg-white/10 mx-2" />
-              <button className="concierge-button" data-testid="book-now-button">
+              <Link href="/booking" className="concierge-button" data-testid="book-now-button">
                 Book Now
-              </button>
+              </Link>
             </div>
 
           {/* Mobile Menu Button */}
@@ -94,26 +94,11 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="pt-4 border-t border-white/10 space-y-3">
-                <Link
-                  href="/auth/login"
-                  onClick={() => setIsOpen(false)}
-                  className="block text-sm uppercase tracking-widest text-slate-300 hover:text-gold"
-                  data-testid="mobile-login-link"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/auth/signup"
-                  onClick={() => setIsOpen(false)}
-                  className="block text-sm uppercase tracking-widest text-slate-300 hover:text-gold"
-                  data-testid="mobile-register-link"
-                >
-                  Register
-                </Link>
+                {/* login/register removed from mobile menu */}
               </div>
-              <button className="gold-button w-full" data-testid="mobile-book-now-button">
+              <Link href="/booking" className="gold-button w-full" data-testid="mobile-book-now-button">
                 Book Now
-              </button>
+              </Link>
             </div>
           </motion.div>
         )}

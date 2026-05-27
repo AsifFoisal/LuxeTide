@@ -1,13 +1,43 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Calendar, Users, MapPin, DollarSign, ArrowRight } from 'lucide-react';
+import { Calendar, Users, MapPin, ArrowRight } from 'lucide-react';
 import { getAvailableSchedules } from '@/src/lib/schedules';
-import { PremiumButton } from './PremiumUI';
+import type { Schedule } from '@/src/types';
 
 export default function AvailableSchedules() {
-  const schedules = getAvailableSchedules();
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    setLoadError(null);
+
+    getAvailableSchedules()
+      .then((data) => {
+        if (isMounted) {
+          setSchedules(data);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load schedules:', error);
+        if (isMounted) {
+          setLoadError('Unable to load schedules right now.');
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const container = {
     hidden: { opacity: 0 },
@@ -24,6 +54,22 @@ export default function AvailableSchedules() {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
   };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12 text-slate-400">
+        <p className="text-lg">Loading schedules...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="text-center py-12 text-rose-300">
+        <p className="text-lg">{loadError}</p>
+      </div>
+    );
+  }
 
   if (schedules.length === 0) {
     return (
@@ -120,10 +166,13 @@ export default function AvailableSchedules() {
             )}
 
             {/* Book Button */}
-            <PremiumButton className="w-full h-10 text-xs flex items-center justify-center gap-2 group/btn">
+            <a
+              href={`/booking?${new URLSearchParams({ shipName: schedule.shipName, destinationName: schedule.destination }).toString()}`}
+              className="gold-button w-full h-10 text-xs inline-flex items-center justify-center gap-2 group/btn"
+            >
               Book Now
               <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-            </PremiumButton>
+            </a>
           </motion.div>
         );
       })}

@@ -10,6 +10,7 @@ import PanoramaTripleSuiteSection from "@/src/components/PanoramaTripleSuiteSect
 import VipPanoramaTripleSuiteSection from "@/src/components/VipPanoramaTripleSuiteSection";
 import ShipMediaCarousel from "@/src/components/ShipMediaCarousel";
 import { getShipDetails, getShipSuiteDetails, getShipSuiteParams } from "@/src/ship-details";
+import { getPublicSuitePricing } from "@/src/lib/suite-pricing-server";
 
 export function generateStaticParams() {
   return getShipSuiteParams();
@@ -30,12 +31,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function ShipSuitePage({ params }: { params: Promise<{ id: string; suite: string }> }) {
   const { id, suite } = await params;
-  const details = getShipSuiteDetails(id, suite);
+  const suitePricing = await getPublicSuitePricing({ shipId: id });
+  const details = getShipSuiteDetails(id, suite, suitePricing);
   if (!details) {
     notFound();
   }
 
-  const ship = getShipDetails(id);
+  const ship = getShipDetails(id, suitePricing);
   const suiteImage = details.suite.image?.src ?? details.suite.gallery[0]?.src ?? ship?.hero.image?.src;
 
   return (
