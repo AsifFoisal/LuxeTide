@@ -7,6 +7,7 @@ export interface MediaItem {
   caption?: string;
 }
 
+
 export interface MediaSection {
   id: string;
   title: string;
