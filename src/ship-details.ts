@@ -9,6 +9,7 @@ import type {
   ShipSuite,
   ShipSuiteDetails,
 } from "@/src/ship-types";
+import { getShipFullAssetPath, getShipThumbAssetPath } from "@/src/lib/ship-assets";
 
 type SuiteSeed = {
   title: string;
@@ -1282,10 +1283,11 @@ function slugify(value: string) {
 
 function mediaImage(src: string, title: string): MediaItem {
   return {
-    src,
+    src: getShipFullAssetPath(src),
     title,
     type: "image",
     caption: title,
+    thumbnailSrc: getShipThumbAssetPath(src),
   };
 }
 

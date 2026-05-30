@@ -3,7 +3,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { motion } from "motion/react";
-import { memo, useCallback, useState } from "react";
+import { memo, useState } from "react";
 import ShipBookingDialog from "@/src/components/ShipBookingDialog";
 import ShipMediaCarousel from "@/src/components/ShipMediaCarousel";
 import type { MediaItem, MediaSection, ShipDetails } from "@/src/ship-types";
@@ -157,10 +157,10 @@ export default function ShipExperiencePage({
 
           <div className="space-y-10">
             {primarySections.map((section) => (
-              <MediaSectionBlock key={section.id} section={section} />
+              <MemoizedExperienceMediaSection key={section.id} section={section} />
             ))}
             {secondarySections.map((section) => (
-              <MediaSectionBlock key={section.id} section={section} subtle />
+              <MemoizedExperienceMediaSection key={section.id} section={section} subtle />
             ))}
           </div>
         </div>
@@ -211,11 +211,12 @@ function MediaSectionBlock({ section, subtle = false }: { section: MediaSection;
                 <iframe src={item.src} title={item.title} className="h-full w-full" />
               ) : (
                 <NextImage
-                  src={item.src}
+                  src={item.thumbnailSrc ?? item.src}
                   alt={item.title}
                   fill
                   sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
-                  unoptimized={typeof item.src === 'string' && item.src.startsWith('http')}
+                  loading="lazy"
+                  unoptimized={typeof (item.thumbnailSrc ?? item.src) === 'string' && (item.thumbnailSrc ?? item.src).startsWith('http')}
                   className="object-cover"
                 />
               )}

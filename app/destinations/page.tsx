@@ -72,8 +72,8 @@ const timelineItems: TimelineItem[] = [
   },
   {
     title: 'Jamtola / Kochikhali',
-    description: 'Route 1: tiger point and sea beach',
-    detail: 'A morning cruise leads to Katka sea beach and then Kochikhali, with dense forest, crocodile spots, and tiger territory.',
+    description: 'Route 1: tiger point and mangrove edge',
+    detail: 'A morning cruise leads to Katka and then Kochikhali, with dense forest, crocodile spots, and tiger territory along the mangrove frontier.',
     tag: 'Day 2 - Route 1',
     icon: Binoculars,
     align: 'right',

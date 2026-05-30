@@ -35,11 +35,11 @@ export default function InfinityRoyalSuiteSection({
           <div className="space-y-3">
             <span className="block text-2xl sm:text-3xl font-heading text-gold">About This Suite</span>
             <h2 className="text-3xl sm:text-4xl font-heading text-white">
-              Nestled in the heart of the Pacific Islands resort, on the edge of a tranquil and beautiful Garden Island.
+              Nestled in the heart of the Sundarbans, where the river bends through a tranquil mangrove canopy.
             </h2>
             <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-4xl">
-              CozyStay is a haven of warmth, tranquility and rejuvenation. Bathed in brilliant sunshine and clear skies,
-              it offers stunning views of palm-lined beaches and gorgeous coral reefs.
+              CozyStay is a haven of warmth, tranquility and rejuvenation. Bathed in soft river light and clear skies,
+              it offers sweeping views of mangrove channels and quiet forest edges.
             </p>
           </div>
 

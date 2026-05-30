@@ -11,12 +11,11 @@ export default function Navbar() {
   const navLinks = [
     { name: 'Home', path: '/', id: 'nav-home-link' },
     { name: 'Ships', path: '/ships', id: 'nav-ships-link' },
-    { name: 'Destinations', path: '/destinations', id: 'nav-destinations-link' },
+    { name: 'Sundarbans', path: '/destinations', id: 'nav-destinations-link' },
     { name: 'Cabins', path: '/cabins', id: 'nav-cabins-link' },
     { name: 'Dining', path: '/dining', id: 'nav-dining-link' },
     { name: 'Services', path: '/services', id: 'nav-services-link' },
     { name: 'Layout', path: '/layouts', id: 'nav-layout-link' },
-    { name: 'Gallery', path: '/gallery', id: 'nav-gallery-link' },
     { name: 'Our Policy', path: '/policy', id: 'nav-policy-link' },
     { name: 'Contact', path: '/contact', id: 'nav-contact-link' },
   ];

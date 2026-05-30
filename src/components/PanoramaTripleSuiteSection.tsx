@@ -35,10 +35,10 @@ export default function PanoramaTripleSuiteSection({
           <div className="space-y-3">
             <span className="block text-2xl sm:text-3xl font-heading text-gold">About This Suite</span>
             <h2 className="text-3xl sm:text-4xl font-heading text-white">
-              Nestled in the heart of the Pacific Islands resort, on the edge of a tranquil and beautiful Garden Island, CozyStay is a haven of warmth, tranquility and rejuvenation.
+              Nestled in the heart of the Sundarbans, where the river bends through a tranquil mangrove canopy, CozyStay is a haven of warmth, tranquility and rejuvenation.
             </h2>
             <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-4xl">
-              Bathed in brilliant sunshine and clear skies, it offers stunning views of palm-lined beaches and gorgeous coral reefs.
+              Bathed in river mist and clear skies, it offers stunning views of mangrove channels and rich green forest edges.
             </p>
           </div>
 

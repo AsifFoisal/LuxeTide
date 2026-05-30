@@ -77,16 +77,17 @@ const CarouselItem = memo(function CarouselItem({ item, index }: { item: MediaIt
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.45, delay: (index ?? 0) * 0.04 }}
     >
-      <div className="relative aspect-[16/10] w-full">
+      <div className="relative aspect-16/10 w-full">
         {item.type === "pdf" ? (
           <iframe src={item.src} title={item.title} className="h-full w-full" />
         ) : (
           <NextImage
-            src={item.src}
+            src={item.thumbnailSrc ?? item.src}
             alt={item.title}
             fill
             sizes="(min-width: 1024px) 42vw, (min-width: 640px) 58vw, 82vw"
-            unoptimized={typeof item.src === 'string' && item.src.startsWith('http')}
+            loading="lazy"
+            unoptimized={typeof (item.thumbnailSrc ?? item.src) === 'string' && (item.thumbnailSrc ?? item.src).startsWith('http')}
             className="object-cover"
           />
         )}

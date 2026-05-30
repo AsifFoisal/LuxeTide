@@ -1,8 +1,10 @@
 'use client';
 
+import NextImage from 'next/image';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { ChevronRight, Users, DollarSign } from 'lucide-react';
+import type { MediaItem } from '@/src/ship-types';
 
 interface Suite {
   slug: string;
@@ -11,12 +13,7 @@ interface Suite {
   capacityLabel: string;
   description: string;
   highlights: string[];
-  image?: {
-    src: string;
-    title: string;
-    type: 'image' | 'video' | 'pdf';
-    caption?: string;
-  };
+  image?: MediaItem;
 }
 
 interface SuiteData {
@@ -34,7 +31,7 @@ export default function CabinsContent({ suites }: CabinsContentProps) {
   return (
     <div className="min-h-screen bg-slate-950">
       {/* Hero Section */}
-      <section className="relative min-h-[60vh] flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 border-b border-white/5 overflow-hidden">
+      <section className="relative min-h-[60vh] flex items-center justify-center bg-linear-to-b from-slate-900 to-slate-950 border-b border-white/5 overflow-hidden">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-0 left-1/2 w-96 h-96 bg-gold/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
           <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gold/5 rounded-full blur-3xl translate-y-1/2" />
@@ -88,13 +85,17 @@ export default function CabinsContent({ suites }: CabinsContentProps) {
                 >
                   {/* Suite Image */}
                   {suite.image && (
-                    <div className="relative h-56 overflow-hidden bg-slate-800">
-                      <img
-                        src={suite.image.src}
+                    <div className="relative aspect-[4/3] overflow-hidden bg-slate-800">
+                      <NextImage
+                        src={suite.image.thumbnailSrc ?? suite.image.src}
                         alt={suite.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        fill
+                        loading="lazy"
+                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                        unoptimized={(suite.image.thumbnailSrc ?? suite.image.src).startsWith('http')}
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-linear-to-t from-slate-950 via-transparent to-transparent" />
                     </div>
                   )}
 
@@ -159,7 +160,7 @@ export default function CabinsContent({ suites }: CabinsContentProps) {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center space-y-6 bg-gradient-to-r from-gold/10 to-slate-800/50 border border-gold/20 rounded-lg p-12"
+          className="text-center space-y-6 bg-linear-to-r from-gold/10 to-slate-800/50 border border-gold/20 rounded-lg p-12"
         >
           <h3 className="text-3xl md:text-4xl font-heading text-white">
             Ready to Book Your Cabin?

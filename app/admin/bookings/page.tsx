@@ -589,7 +589,7 @@ export default function BookingsAdminPage() {
                       >
                         <option value="">Select Package</option>
                         <option value="emerald-expedition">Emerald Expedition</option>
-                        <option value="coral-luxury">Coral Island Luxury</option>
+                        <option value="sundarbans-luxury">Sundarbans Delta Luxury</option>
                       </PremiumSelect>
                     </div>
                     <div>

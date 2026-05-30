@@ -5,6 +5,7 @@ export interface MediaItem {
   title: string;
   type: MediaType;
   caption?: string;
+  thumbnailSrc?: string;
 }
 
 

@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { getShipThumbAssetPath } from '@/src/lib/ship-assets';
 import Link from 'next/link';
 import { ArrowLeft, Ship } from 'lucide-react';
-import { SHIPS } from '@/src/constants';
+import { DESTINATIONS, SHIPS } from '@/src/constants';
 import { PremiumButton, PremiumInput, PremiumSelect } from '@/src/components/PremiumUI';
 import { createBooking } from '@/src/lib/bookings';
 import { getActiveSuiteAvailabilities } from '@/src/lib/suite-availability';
@@ -44,13 +45,14 @@ function parseQueryValue(value: string | null): string {
 }
 
 export default function BookingPage() {
+  const defaultDestination = DESTINATIONS[0];
   const [queryData, setQueryData] = useState({
     shipId: '',
     shipName: '',
     suiteSlug: '',
     suiteTitle: '',
-    destinationId: '',
-    destinationName: '',
+    destinationId: defaultDestination?.id ?? '',
+    destinationName: defaultDestination?.name ?? '',
     dateRangeId: '',
   });
   const [selectedSuiteSlug, setSelectedSuiteSlug] = useState('');
@@ -95,14 +97,16 @@ export default function BookingPage() {
     const shipId = parseQueryValue(params.get('shipId'));
     const suiteSlug = parseQueryValue(params.get('suiteSlug'));
     const suiteTitle = parseQueryValue(params.get('suiteTitle'));
+    const destinationId = parseQueryValue(params.get('destinationId')) || defaultDestination?.id || '';
+    const destinationName = parseQueryValue(params.get('destinationName')) || defaultDestination?.name || '';
 
     setQueryData({
       shipId,
       shipName: parseQueryValue(params.get('shipName')),
       suiteSlug,
       suiteTitle,
-      destinationId: parseQueryValue(params.get('destinationId')),
-      destinationName: parseQueryValue(params.get('destinationName')),
+      destinationId,
+      destinationName,
       dateRangeId: parseQueryValue(params.get('dateRangeId')),
     });
 
@@ -201,7 +205,7 @@ export default function BookingPage() {
     });
   }, [maxRooms]);
 
-  const shipImage = ship?.image || '/ships/the-wave-2/ship.jpg';
+  const shipImage = getShipThumbAssetPath(ship?.image || '/ships/the-wave-2/ship.jpg');
 
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -292,9 +296,7 @@ export default function BookingPage() {
                 <p className="text-slate-300 text-sm sm:text-base">
                   {ship?.name || queryData.shipName || 'Ship'}
                 </p>
-                {queryData.destinationName && (
-                  <p className="text-xs uppercase tracking-[0.3em] text-gold/80">Destination: {queryData.destinationName}</p>
-                )}
+                <p className="text-xs uppercase tracking-[0.3em] text-gold/80">Destination: {queryData.destinationName || defaultDestination?.name || 'The Sundarbans'}</p>
               </div>
             </div>
           </div>

@@ -36,7 +36,7 @@ export default function Footer() {
             <h4 className="editorial-label mb-8">Navigation</h4>
             <ul className="space-y-4 text-[10px] uppercase tracking-widest text-slate-400">
               <li><Link href="/ships" className="hover:text-gold transition-colors">Our Fleet</Link></li>
-              <li><Link href="/destinations" className="hover:text-gold transition-colors">Coastal Route</Link></li>
+              <li><Link href="/destinations" className="hover:text-gold transition-colors">Sundarbans Route</Link></li>
               <li><Link href="/packages" className="hover:text-gold transition-colors">Expeditions</Link></li>
               <li><Link href="/gallery" className="hover:text-gold transition-colors">Visual Archive</Link></li>
             </ul>

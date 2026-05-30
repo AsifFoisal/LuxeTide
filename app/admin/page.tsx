@@ -31,7 +31,7 @@ const bookingRows = [
     id: 'BK-2077',
     customer: 'Rafi Islam',
     email: 'rafi.islam@luxetide.com',
-    packageName: 'Coral Island Luxury',
+    packageName: 'Sundarbans Delta Luxury',
     shipName: 'Pearl of Bengal',
     dates: 'Jul 02 - Jul 08, 2026',
     passengers: 4,
@@ -268,7 +268,7 @@ export default function AdminPage() {
             <div className="border border-white/5 p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <MapPin className="w-6 h-6 text-gold" />
-                <span className="text-xs uppercase tracking-[0.3em] text-slate-500">{DESTINATIONS.length} destinations</span>
+                <span className="text-xs uppercase tracking-[0.3em] text-slate-500">{DESTINATIONS.length === 1 ? '1 destination' : `${DESTINATIONS.length} destinations`}</span>
               </div>
               <p className="text-white font-heading text-xl">Destinations</p>
               <p className="text-sm text-slate-500">Curate stops, highlights, and image galleries.</p>

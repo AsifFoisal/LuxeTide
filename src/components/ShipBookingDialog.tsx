@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Dialog, DialogContent } from "@/src/components/ui/dialog";
 import { PremiumButton, PremiumInput } from "@/src/components/PremiumUI";
-import { SHIPS } from '@/src/constants';
+import { DESTINATIONS, SHIPS } from '@/src/constants';
 
 interface BookingPrefill {
   suiteTitle?: string;
@@ -41,6 +41,12 @@ export default function ShipBookingDialog({
   if (prefill?.suiteTitle) params.suiteTitle = prefill.suiteTitle;
   if (prefill?.dateRangeLabel) params.dateRangeId = prefill.dateRangeLabel;
   if (prefill?.destinationName) params.destinationName = prefill.destinationName;
+
+  const defaultDestination = DESTINATIONS[0];
+  if (defaultDestination) {
+    params.destinationId = params.destinationId ?? defaultDestination.id;
+    params.destinationName = params.destinationName ?? defaultDestination.name;
+  }
 
   const href = `/booking?${new URLSearchParams(params).toString()}`;
 

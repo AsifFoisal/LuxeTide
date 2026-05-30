@@ -3,6 +3,7 @@
 import { motion, useScroll, useTransform } from 'motion/react';
 import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
+import NextImage from 'next/image';
 import { SHIPS, DESTINATIONS } from '@/src/constants';
 import { Calendar, Users, MapPin, ArrowRight, Ship } from 'lucide-react';
 import { PremiumButton, PremiumInput, PremiumSelect } from '@/src/components/PremiumUI';
@@ -33,7 +34,7 @@ export default function Home() {
   const containerRef = useRef(null);
   const [suites, setSuites] = useState<HomeSuite[]>([]);
   const [suiteAvailabilities, setSuiteAvailabilities] = useState<SuiteAvailability[]>([]);
-  const [destinationId, setDestinationId] = useState('');
+  const [destinationId, setDestinationId] = useState(DESTINATIONS[0]?.id ?? '');
   const [selectedSuiteKey, setSelectedSuiteKey] = useState('');
   const [selectedDateRangeId, setSelectedDateRangeId] = useState('');
 
@@ -84,8 +85,10 @@ export default function Home() {
     { title: 'Adventure Tours', icon: MapPin, desc: 'Thrilling experiences' },
     { title: 'Sea Cruises', icon: Ship, desc: 'Luxury at sea' },
     { title: 'Private Charters', icon: Users, desc: 'Exclusive journeys' },
-    { title: 'Global Explore', icon: Calendar, desc: 'Infinite horizons' }
+    { title: 'Sundarbans Explore', icon: Calendar, desc: 'Mangrove horizons' }
   ];
+
+  const activeDestination = DESTINATIONS[0];
 
   const selectedSuite = suites.find((suite) => `${suite.shipId}::${suite.slug}` === selectedSuiteKey);
 
@@ -97,8 +100,8 @@ export default function Home() {
 
   const bookingHref = selectedSuite && selectedDateRange
     ? `/booking?${new URLSearchParams({
-        destinationId,
-        destinationName: DESTINATIONS.find((destination) => destination.id === destinationId)?.name || '',
+        destinationId: destinationId || activeDestination?.id || '',
+        destinationName: DESTINATIONS.find((destination) => destination.id === destinationId)?.name || activeDestination?.name || '',
         shipId: selectedSuite.shipId,
         shipName: selectedSuite.ship,
         suiteSlug: selectedSuite.slug,
@@ -120,14 +123,14 @@ export default function Home() {
       <section className="relative h-[95vh] flex items-center overflow-hidden">
           <motion.div className="absolute inset-0 z-0" style={{ y }}>
           <img 
-            src="https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=60&w=1200" 
-            alt="Luxury Cruise Hero" 
+            src="/ship-assets/hero.png"
+            alt="Luxury Cruise Hero"
             className="w-full h-full object-cover scale-110 will-change-transform"
             decoding="async"
             loading="eager"
             style={{ transform: 'translateZ(0)' }}
           />
-          <div className="absolute inset-0 bg-linear-to-r from-slate-950 via-slate-950/40 to-transparent"></div>
+          <div className="absolute inset-0 bg-linear-to-r backdrop-blur-[2px] brightness-50"></div>
           <div className="absolute inset-0 bg-black/40"></div>
         </motion.div>
 
@@ -152,7 +155,7 @@ export default function Home() {
                 Book Your Next <br /><span className="italic-accent text-gold">Memorable</span> Trip.
               </h1>
               <p className="text-xl text-slate-300 font-light leading-relaxed max-w-2xl">
-                We provide the most exclusive maritime journeys across the Bay of Bengal and beyond. Luxury redefined at sea.
+                We provide the most exclusive Sundarbans journeys across the mangrove delta. Luxury redefined at sea.
               </p>
             </motion.div>
 
@@ -170,7 +173,7 @@ export default function Home() {
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDestinationId(e.target.value)}
                   className="h-10 sm:h-12 bg-white/5 border-white/10 w-full text-white text-sm sm:text-base"
                 >
-                  <option value="" className="bg-slate-900">Where to go?</option>
+                  <option value="" className="bg-slate-900">Sundarbans only</option>
                   {DESTINATIONS.map((destination) => (
                     <option key={destination.id} value={destination.id} className="bg-slate-900">
                       {destination.name}
@@ -455,37 +458,52 @@ export default function Home() {
 
       {/* Featured Destinations (Editorial Pattern) */}
       <section className="py-16 sm:py-24 md:py-32 bg-bg-secondary border-t border-white/5">
-        <div className="luxury-container flex flex-col lg:flex-row">
-          <motion.div 
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            className="flex-1 flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-white/5 p-6 sm:p-8 lg:p-20"
-          >
-            <span className="editorial-label mb-2 sm:mb-3">Top Region</span>
-            <h3 className="text-2xl sm:text-3xl lg:text-4xl text-slate-100 font-heading">Saint Martin&apos;s</h3>
-            <p className="text-[8px] sm:text-[10px] text-slate-500 uppercase tracking-[0.3em] font-bold mt-3">The Blue Lagoon • Coral Paradise</p>
-          </motion.div>
-          
-          <div className="flex-2 grid grid-cols-1 md:grid-cols-3 gap-0 min-h-64 md:min-h-80">
-            {DESTINATIONS.slice(0, 3).map((item, i) => (
-              <motion.div 
-                key={item.id}
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
+        {activeDestination && (
+          <div className="group relative min-h-[60vh] overflow-hidden">
+            <div className="absolute inset-0">
+              <NextImage
+                src={activeDestination.image}
+                alt={activeDestination.name}
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover transition-transform duration-[1.6s] group-hover:scale-105"
+                unoptimized={activeDestination.image.startsWith('http')}
+              />
+              <div className="absolute inset-0 bg-slate-950/65" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(217,180,102,0.12),transparent_55%)]" />
+            </div>
+
+            <Link
+              href="/destinations"
+              aria-label={`Open ${activeDestination.name} destination page`}
+              className="absolute inset-0 z-20 block"
+            >
+              <span className="sr-only">Open {activeDestination.name} destination page</span>
+            </Link>
+
+            <div className="relative z-10 flex min-h-[60vh] items-center justify-center px-6 text-center pointer-events-none">
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={revealViewport}
-                transition={{ duration: 1, delay: i * 0.2 }}
-                className="group relative overflow-hidden h-64 md:h-80 lg:h-full border-r border-white/5 last:border-r-0"
+                transition={{ duration: 0.7 }}
+                className="max-w-3xl space-y-4 sm:space-y-5"
               >
-                <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-[1.5s]" />
-                <div className="absolute inset-0 bg-slate-950/40 group-hover:bg-slate-950/10 transition-colors" />
-                <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 lg:bottom-10 lg:left-10">
-                  <p className="text-[8px] sm:text-[10px] text-gold font-bold uppercase tracking-widest mb-1 sm:mb-2">Destination</p>
-                  <p className="text-sm sm:text-base lg:text-lg font-heading text-white tracking-widest uppercase">{item.name}</p>
-                </div>
+                <span className="editorial-label">Only Region</span>
+                <h3 className="font-heading text-4xl sm:text-5xl md:text-6xl text-white leading-tight">
+                  The Sundarbans
+                </h3>
+                <p className="text-sm sm:text-base md:text-lg text-slate-300 uppercase tracking-[0.32em] font-semibold">
+                  Mangrove Delta • Wildlife Reserve
+                </p>
+                <p className="pt-2 text-xs sm:text-sm uppercase tracking-[0.28em] text-gold/90 font-bold">
+                  Click to explore destinations
+                </p>
               </motion.div>
-            ))}
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* Footer Newsletter */}

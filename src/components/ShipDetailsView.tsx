@@ -33,18 +33,11 @@ export default function ShipDetailsView({ details }: ShipDetailsViewProps) {
     ? videos.filter((video) => video.src !== heroVideoSrc)
     : videos;
   const [lightboxImage, setLightboxImage] = useState<LightboxImage | null>(null);
+  const [isLightboxImageLoading, setIsLightboxImageLoading] = useState(false);
 
   const openLightbox = useCallback((image: LightboxImage) => {
+    setIsLightboxImageLoading(true);
     setLightboxImage(image);
-  }, []);
-
-  const preloadImage = useCallback((src: string) => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const image = new window.Image();
-    image.src = src;
   }, []);
 
   return (
@@ -52,12 +45,21 @@ export default function ShipDetailsView({ details }: ShipDetailsViewProps) {
       <section className="relative min-h-[85vh] flex items-center overflow-hidden">
         {heroVideoSrc ? (
           <video
+            ref={(el) => {
+              // try to start playback if browser allows autoplay (muted)
+              try {
+                el?.play?.();
+              } catch (e) {
+                // ignore play() errors (browsers may block autoplay)
+              }
+            }}
             src={heroVideoSrc}
             poster={heroPoster}
             // avoid aggressive preloading of large hero videos to reduce initial load
             muted
             loop
             playsInline
+            autoPlay
             preload="metadata"
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -144,8 +146,6 @@ export default function ShipDetailsView({ details }: ShipDetailsViewProps) {
             {heroPoster ? (
               <button
                 type="button"
-                onMouseEnter={() => preloadImage(heroPoster)}
-                onFocus={() => preloadImage(heroPoster)}
                 onClick={() =>
                   openLightbox({
                     src: heroPoster,
@@ -215,11 +215,10 @@ export default function ShipDetailsView({ details }: ShipDetailsViewProps) {
             </p>
           </div>
           {gallerySections.map((section) => (
-            <MediaSectionBlock
+            <MemoizedMediaSectionBlock
               key={section.id}
               section={section}
               onImageClick={openLightbox}
-              onImagePrefetch={preloadImage}
             />
           ))}
         </div>
@@ -278,6 +277,7 @@ export default function ShipDetailsView({ details }: ShipDetailsViewProps) {
         open={Boolean(lightboxImage)}
         onOpenChange={(open) => {
           if (!open) {
+            setIsLightboxImageLoading(false);
             setLightboxImage(null);
           }
         }}
@@ -295,11 +295,23 @@ export default function ShipDetailsView({ details }: ShipDetailsViewProps) {
               transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
               className="relative w-full h-[85vh] flex items-center justify-center will-change-transform will-change-opacity"
             >
-              <img
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40">
+                {isLightboxImageLoading && (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border border-gold/20 bg-slate-950/70 text-gold shadow-[0_0_60px_rgba(217,180,102,0.15)]">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  </div>
+                )}
+              </div>
+              <NextImage
+                key={lightboxImage.src}
                 src={lightboxImage.src}
                 alt={lightboxImage.alt}
-                className="max-w-[96vw] max-h-[85vh] object-contain"
-                style={{ width: 'auto', height: 'auto', transform: 'translateZ(0)' }}
+                width={2400}
+                height={1600}
+                sizes="96vw"
+                className={`relative z-10 h-auto w-auto max-w-[96vw] max-h-[85vh] object-contain transition-opacity duration-200 ${isLightboxImageLoading ? "opacity-0" : "opacity-100"}`}
+                onLoadingComplete={() => setIsLightboxImageLoading(false)}
+                onError={() => setIsLightboxImageLoading(false)}
               />
             </motion.div>
           )}
@@ -312,11 +324,9 @@ export default function ShipDetailsView({ details }: ShipDetailsViewProps) {
 function MediaSectionBlock({
   section,
   onImageClick,
-  onImagePrefetch
 }: {
   section: MediaSection;
   onImageClick: (image: LightboxImage) => void;
-  onImagePrefetch: (src: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const visibleCount = expanded ? section.items.length : 3;
@@ -336,8 +346,6 @@ function MediaSectionBlock({
               <motion.button
                 key={`${section.id}-${item.src}-${index}`}
                 type="button"
-                onMouseEnter={() => onImagePrefetch(item.src)}
-                onFocus={() => onImagePrefetch(item.src)}
                 onClick={() =>
                   onImageClick({
                     src: item.src,
@@ -352,13 +360,14 @@ function MediaSectionBlock({
                 viewport={{ once: true, amount: 0.18 }}
                 transition={{ duration: 0.45, delay: index * 0.03 }}
               >
-                <div className="relative h-64 w-full">
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-900/40">
                   <NextImage
-                    src={item.src}
+                    src={item.thumbnailSrc ?? item.src}
                     alt={item.title}
                     fill
-                    unoptimized={item.src.startsWith("http")}
+                    loading="lazy"
                     sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                    unoptimized={(item.thumbnailSrc ?? item.src).startsWith("http")}
                     className="object-cover"
                   />
                 </div>
