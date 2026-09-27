@@ -278,10 +278,6 @@ This is a solo-built project designed, developed, and maintained by G.M Asif Foi
 
 ---
 
-## License
-Distributed under the MIT License. See `LICENSE.txt` for more information.
-
----
 
 ## Contact
 
